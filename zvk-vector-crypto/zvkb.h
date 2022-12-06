@@ -17,7 +17,9 @@
 #ifndef _ZVKB_H
 #define _ZVKB_H
 
-void zvkb_ghash(int64_t *X, uint64_t *H);
+void zvkb_ghash(uint64_t *X, uint64_t *H);
 void zvkb_ghash_init(uint64_t *H);
+
+void zvkg_ghash(uint64_t *Y, const uint64_t *X, uint64_t *H);
 
 #endif	/* _ZVKNS_H */

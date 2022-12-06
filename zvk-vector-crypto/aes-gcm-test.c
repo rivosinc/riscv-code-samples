@@ -39,11 +39,25 @@ __attribute__((aligned(16)))
 uint8_t buf[1024];
 
 static void
-ghash(uint128 *Y, uint128 *X, uint128 *H)
+ghash(uint128 *Y, const uint128 *X, uint128 *H1, uint128 *H2)
 {
+#ifdef USE_ZVKG
+	uint128 Y_copy = *Y;
+#endif
+
+	zvkb_ghash(&Y->dwords[0], &H1->dwords[0]);
+
 	Y->dwords[0] ^= X->dwords[0];
 	Y->dwords[1] ^= X->dwords[1];
-	zvkb_ghash(&Y->dwords[0], &H->dwords[0]);
+#ifdef USE_ZVKG
+	zvkg_ghash(&Y_copy.dwords[0], &X->dwords[0], &H2->dwords[0]);
+	if (Y_copy.dwords[0] != Y->dwords[0] || Y_copy.dwords[1] != Y->dwords[1]) {
+		printf("GHASH result doesn't match:\n");
+		printf("Zvkb: 0x%lx%lx\n", Y->dwords[0], Y->dwords[1]);
+		printf("Zvkg: 0x%lx%lx\n", Y_copy.dwords[0], Y_copy.dwords[1]);
+		assert(false);
+	}
+#endif
 }
 
 static void
@@ -57,7 +71,7 @@ encrypt_single(uint8_t *out, uint8_t *in, uint8_t *key, int keylen)
 }
 
 static void
-prepare_icb(uint128 *ICB, uint128 *H, const uint8_t *iv, int ivlen)
+prepare_icb(uint128 *ICB, uint128 *H1, uint128 *H2, const uint8_t *iv, int ivlen)
 {
 	uint128 X = {};
 	uint64_t blen;
@@ -74,14 +88,15 @@ prepare_icb(uint128 *ICB, uint128 *H, const uint8_t *iv, int ivlen)
 		return;
 	}
 
-	ICB->dwords[0] = 0;
-	ICB->dwords[1] = 0;
 	blen = 8 * ivlen;
+	bzero(ICB, sizeof(*ICB));
+	memcpy(ICB, iv, MIN(16, ivlen));
+	iv += MIN(16, ivlen);
+	ivlen -= MIN(16, ivlen);
 
 	/* First apply GHASH to full, 128 bit blocks of IV. */
 	while (ivlen >= 16) {
-		memcpy(&X, iv, 16);
-		ghash(ICB, &X, H);
+		ghash(ICB, (const uint128 *)iv, H1, H2);
 		iv += 16;
 		ivlen -= 16;
 	}
@@ -90,21 +105,26 @@ prepare_icb(uint128 *ICB, uint128 *H, const uint8_t *iv, int ivlen)
 	if (ivlen > 0) {
 		bzero(&X, sizeof(X));
 		memcpy(&X, iv, ivlen);
-		ghash(ICB, &X, H);
+		ghash(ICB, &X, H1, H2);
 	}
 
 	X.dwords[0] = 0;
 	X.dwords[1] = __builtin_bswap64(blen);
-	ghash(ICB, &X, H);
+	ghash(ICB, &X, H1, H2);
+
+	bzero(&X, sizeof(X));
+	ghash(ICB, &X, H1, H2);
 }
 
 static int
 run_test(struct aes_gcm_test *test, int keylen)
 {
-	uint128 H, temp = {}, Y = {}, ICB = {};
+	uint128 temp = {}, Y = {}, ICB = {};
+	uint128 H1, H2;
 	uint128 tag;
-	uint8_t *xordata;
+	uint8_t *xordata, *aad;
 	uint32_t counter;
+	size_t aadlen;
 	int rc, rem;
 
 	assert(keylen == 128 || keylen == 256);
@@ -112,10 +132,12 @@ run_test(struct aes_gcm_test *test, int keylen)
 	/* H = ENC(0, K)
 	 * Borrow a zero 128bit block from ICB.
 	 */
-	encrypt_single(&H.bytes[0], &ICB.bytes[0], test->key, keylen);
-	zvkb_ghash_init(&H.dwords[0]);
+	encrypt_single(&H1.bytes[0], &ICB.bytes[0], test->key, keylen);
+	H2 = H1;
 
-	prepare_icb(&ICB, &H, test->iv, test->ivlen);
+	zvkb_ghash_init(&H1.dwords[0]);
+
+	prepare_icb(&ICB, &H1, &H2, test->iv, test->ivlen);
 
 	if (test->encrypt)
 		xordata = test->pt;
@@ -132,26 +154,33 @@ run_test(struct aes_gcm_test *test, int keylen)
 	counter = __builtin_bswap32(ICB.words[3]);
 	ICB.words[3] = __builtin_bswap32(++counter);
 
-	for (int i = 0; i < test->aadlen / 16; i++)
-		ghash(&Y, (uint128 *)(&test->aad[16 * i]), &H);
+	aadlen = test->aadlen;
+	aad = test->aad;
+	memcpy(&Y, aad, MIN(aadlen, 16));
+	aad += MIN(aadlen, 16);
+	aadlen -= MIN(aadlen, 16);
 
-	rem = test->aadlen % 16;
-	if (rem != 0) {
+	while (aadlen >= 16) {
+		ghash(&Y, (uint128 *)aad, &H1, &H2);
+		aad += 16;
+		aadlen -= 16;
+	}
+	if (aadlen > 0) {
 		bzero(&temp, sizeof(temp));
-		memcpy(&temp, &test->aad[test->aadlen - rem], rem);
-		ghash(&Y, &temp, &H);
+		memcpy(&temp, aad, aadlen);
+		ghash(&Y, &temp, &H1, &H2);
 	}
 
 	for (int i = 0; i < test->ctlen / 16; i++) {
 		if (!test->encrypt)
-			ghash(&Y, (uint128 *)(&xordata[16 * i]), &H);
+			ghash(&Y, (uint128 *)(&xordata[16 * i]), &H1, &H2);
 
 		encrypt_single(&buf[16 * i], &ICB.bytes[0], test->key, keylen);
 		for (int j = 0; j < 16; j++)
 			buf[16 * i + j] ^= xordata[16 * i + j];
 
 		if (test->encrypt)
-			ghash(&Y, (uint128 *)(&buf[16 * i]), &H);
+			ghash(&Y, (uint128 *)(&buf[16 * i]), &H1, &H2);
 
 		ICB.words[3] = __builtin_bswap32(++counter);
 	}
@@ -161,7 +190,7 @@ run_test(struct aes_gcm_test *test, int keylen)
 		if (!test->encrypt) {
 			bzero(&temp, sizeof(temp));
 			memcpy(&temp, &xordata[test->ctlen - rem], rem);
-			ghash(&Y, &temp, &H);
+			ghash(&Y, &temp, &H1, &H2);
 		}
 
 		/* buf shall have enough space to fit the extra bytes. */
@@ -172,13 +201,16 @@ run_test(struct aes_gcm_test *test, int keylen)
 		if (test->encrypt) {
 			bzero(&temp, sizeof(temp));
 			memcpy(&temp, &buf[test->ctlen - rem], rem);
-			ghash(&Y, &temp, &H);
+			ghash(&Y, &temp, &H1, &H2);
 		}
 	}
 
 	temp.dwords[0] = __builtin_bswap64(8 * test->aadlen);
 	temp.dwords[1] = __builtin_bswap64(8 * test->ctlen);
-	ghash(&Y, &temp, &H);
+	ghash(&Y, &temp, &H1, &H2);
+
+	bzero(&temp, sizeof(temp));
+	ghash(&Y, &temp, &H1, &H2);
 
 	/* Prepare auth tag. */
 	encrypt_single(&tag.bytes[0], &tag.bytes[0], test->key, keylen);

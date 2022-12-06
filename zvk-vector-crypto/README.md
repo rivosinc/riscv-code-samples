@@ -13,9 +13,10 @@ Specifically:
 - aes-cbc-test.c - implements the AES-CBC with a 128 or 256 bit key using the
   Zvkns extension. The resulting program runs this implementation against NIST
   Known Answer Tests.
-- aes-gcm-test.c - implements the AES-GCM with a 128 or 256 bit key using Zvkns
-  and Zvkb extensions. The resulting program runs this implementation against
-  NIST Known Answer Tests.
+- aes-gcm-test.c - implements the AES-GCM with a 128 or 256 bit key using Zvkns,
+  Zvkg and Zvkb extensions. The resulting program runs this implementation
+  against NIST Known Answer Tests. In order to disable the usage of Zvkg
+  extension the `SKIP_ZVKG` build variable can be set. See below for details.
 - zvkb-test.c - shows proper usage of instructions in the Zvkb extension. The
   resulting program generates a set of random verification data and applies
   the Zvkb routines to that.
@@ -80,6 +81,7 @@ make run-tests TARGET=riscv64-unknown-linux-gnu \
 - `TARGET` - Target triplet to use. By default riscv64-linux-gnu.
 - `PK` - Location of the riscv-pk binary. By default it's
   `~/RISC-V/$(TARGET)/bin/pk`.
+- `SKIP_ZVKG` - Don't use the Zvkg extension in GCM tests.
 
 See Makefile for more details.
 

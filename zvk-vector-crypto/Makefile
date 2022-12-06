@@ -23,6 +23,14 @@ CC?=$(TARGET)-gcc
 LD?=$(TARGET)-gcc
 
 MARCH_EXT_FLAGS=_zvkns_zvknhb_zvkb_zvksed
+
+# By default run the GCM tests using both zvkg and zvkb extensions.
+# If your implementation doesn't support Zvkg set the SKIP_ZVKG env.
+ifndef SKIP_ZVKG
+MARCH_EXT_FLAGS:=$(MARCH_EXT_FLAGS)_zvkg
+DFLAGS+=-DUSE_ZVKG
+endif
+
 CFLAGS+=-march=rv64gcv$(MARCH_EXT_FLAGS)
 LDFLAGS+=-static
 SPIKE_FLAGS?=--varch=vlen:$(VLEN),elen:64 --isa=rv64gcv$(MARCH_EXT_FLAGS)
@@ -65,6 +73,7 @@ OBJECTS=aes-cbc-test.o \
 	zvkns.o \
 	zvknh.o \
 	zvkb.o \
+	zvkg.o \
 	zvksed.o
 
 default: aes-cbc-test aes-gcm-test sha-test zvkb-test sm4-test
@@ -82,7 +91,7 @@ $(SUBDIR_SHA_VECTORS):
 	python3 gentests.py sha256 sha512
 
 %.s: %.c test-vectors
-	$(CC) -S $(CFLAGS) -o $@ $<
+	$(CC) -S $(CFLAGS) $(DFLAGS) -o $@ $<
 
 $(OBJECTS): %.o: %.s
 	$(AS) -c $(CFLAGS) -o $@ $^
@@ -90,7 +99,7 @@ $(OBJECTS): %.o: %.s
 aes-cbc-test: aes-cbc-test.o zvkns.o
 	$(LD) $(LDFLAGS) -o $@ $^
 
-aes-gcm-test: aes-gcm-test.o zvkns.o zvkb.o
+aes-gcm-test: aes-gcm-test.o zvkns.o zvkb.o zvkg.o
 	$(LD) $(LDFLAGS) -o $@ $^
 
 sha-test: sha-test.o zvknh.o
