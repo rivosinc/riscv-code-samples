@@ -54,3 +54,6 @@ dkms.conf
 # Miscelleanous
 __pycache__
 cscope.out
+test-vectors
+aes-cbc-test
+aes-cbc-test.s
