@@ -22,7 +22,7 @@ AS?=$(TARGET)-as
 CC?=$(TARGET)-gcc
 LD?=$(TARGET)-gcc
 
-MARCH_EXT_FLAGS=_zvkns_zvknhb_zvkb
+MARCH_EXT_FLAGS=_zvkns_zvknhb_zvkb_zvksed
 CFLAGS+=-march=rv64gcv$(MARCH_EXT_FLAGS)
 LDFLAGS+=-static
 SPIKE_FLAGS?=--varch=vlen:$(VLEN),elen:64 --isa=rv64gcv$(MARCH_EXT_FLAGS)
@@ -51,6 +51,8 @@ GCM_VECTORS=aes-gcm-vectors.h    \
 	    gcmDecrypt256.h      \
 	    gcmEncryptExtIV256.h \
 
+SM4_VECTORS=sm4-test-vectors.h
+
 SUBDIR_CBC_VECTORS=$(CBC_VECTORS:%=$(TEST_VECTORS_DIR)/%)
 SUBDIR_SHA_VECTORS=$(SHA_VECTORS:%=$(TEST_VECTORS_DIR)/%)
 SUBDIR_GCM_VECTORS=$(GCM_VECTORS:%=$(TEST_VECTORS_DIR)/%)
@@ -59,11 +61,13 @@ OBJECTS=aes-cbc-test.o \
 	sha-test.o \
 	zvkb-test.o \
 	aes-gcm-test.o \
+	sm4-test.o \
 	zvkns.o \
 	zvknh.o \
-	zvkb.o
+	zvkb.o \
+	zvksed.o
 
-default: aes-cbc-test aes-gcm-test sha-test zvkb-test
+default: aes-cbc-test aes-gcm-test sha-test zvkb-test sm4-test
 
 .PHONY: test-vectors
 test-vectors: $(SUBDIR_CBC_VECTORS) $(SUBDIR_GCM_VECTORS) $(SUBDIR_SHA_VECTORS)
@@ -95,6 +99,9 @@ sha-test: sha-test.o zvknh.o
 zvkb-test: zvkb-test.o zvkb.o
 	$(LD) $(LDFLAGS) -o $@ $^
 
+sm4-test: sm4-test.o zvksed.o
+	$(LD) $(LDFLAGS) -o $@ $^
+
 .PHONY: run-aes-cbc
 run-aes-cbc: aes-cbc-test
 	$(SPIKE) $(SPIKE_FLAGS) $(PK) $<
@@ -111,8 +118,12 @@ run-sha: sha-test
 run-zvkb: zvkb-test
 	$(SPIKE) $(SPIKE_FLAGS) $(PK) $<
 
+.PHONY: run-sm4
+run-sm4: sm4-test
+	$(SPIKE) $(SPIKE_FLAGS) $(PK) $<
+
 .PHONY: run-tests
-run-tests: run-aes-cbc run-aes-gcm run-sha run-zvkb
+run-tests: run-aes-cbc run-aes-gcm run-sha run-zvkb run-sm4
 
 .PHONY: clean
 clean:
@@ -124,3 +135,4 @@ clean:
 	rm -f sha-test
 	rm -f zvkb-test
 	rm -f aes-gcm-test
+	rm -f sm4-test
