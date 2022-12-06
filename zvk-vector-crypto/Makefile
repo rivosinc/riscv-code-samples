@@ -22,7 +22,7 @@ AS?=$(TARGET)-as
 CC?=$(TARGET)-gcc
 LD?=$(TARGET)-gcc
 
-MARCH_EXT_FLAGS=_zvkns_zvknhb
+MARCH_EXT_FLAGS=_zvkns_zvknhb_zvkb
 CFLAGS+=-march=rv64gcv$(MARCH_EXT_FLAGS)
 LDFLAGS+=-static
 SPIKE_FLAGS?=--varch=vlen:$(VLEN),elen:64 --isa=rv64gcv$(MARCH_EXT_FLAGS)
@@ -51,10 +51,12 @@ SUBDIR_SHA_VECTORS=$(SHA_VECTORS:%=$(TEST_VECTORS_DIR)/%)
 
 OBJECTS=aes-cbc-test.o \
 	sha-test.o \
+	zvkb-test.o \
 	zvkns.o \
-	zvknh.o
+	zvknh.o \
+	zvkb.o
 
-default: aes-cbc-test sha-test
+default: aes-cbc-test sha-test zvkb-test
 
 .PHONY: test-vectors
 test-vectors: $(SUBDIR_CBC_VECTORS) $(SUBDIR_SHA_VECTORS)
@@ -77,6 +79,9 @@ aes-cbc-test: aes-cbc-test.o zvkns.o
 sha-test: sha-test.o zvknh.o
 	$(LD) $(LDFLAGS) -o $@ $^
 
+zvkb-test: zvkb-test.o zvkb.o
+	$(LD) $(LDFLAGS) -o $@ $^
+
 .PHONY: run-aes-cbc
 run-aes-cbc: aes-cbc-test
 	$(SPIKE) $(SPIKE_FLAGS) $(PK) $<
@@ -85,8 +90,12 @@ run-aes-cbc: aes-cbc-test
 run-sha: sha-test
 	$(SPIKE) $(SPIKE_FLAGS) $(PK) $<
 
+.PHONY: run-zvkb
+run-zvkb: zvkb-test
+	$(SPIKE) $(SPIKE_FLAGS) $(PK) $<
+
 .PHONY: run-tests
-run-tests: run-aes-cbc run-sha
+run-tests: run-aes-cbc run-sha run-zvkb
 
 .PHONY: clean
 clean:
@@ -95,3 +104,4 @@ clean:
 	rm -f *.o
 	rm -f aes-cbc-test
 	rm -f sha-test
+	rm -f zvkb-test

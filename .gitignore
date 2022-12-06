@@ -56,4 +56,11 @@ __pycache__
 cscope.out
 test-vectors
 aes-cbc-test
+sha-test
+aes-gcm-test
+zvkb-test
 aes-cbc-test.s
+aes-cbc-test.s
+sha-test.s
+aes-gcm-test.s
+zvkb-test.s
