@@ -14,24 +14,14 @@
  * limitations under the License.
  */
 
-#ifndef _SM4_TEST_H
-#define _SM4_TEST_H
+#ifndef _ZVKSH_H
+#define _ZVKSH_H
 
-__attribute__((aligned(16)))
-struct sm4_test_vector {
-    uint32_t *message;
-    uint32_t *output;
-    uint32_t *master_key;
-    size_t message_len;
-    size_t iterarions;
-    bool encrypt;
-	char foo[3];
-};
+void
+zvksh_sm3_encode_vv(
+    void* dest,
+    const void* src,
+    uint64_t length
+);
 
-struct sm4_test_suite {
-    const char *name;
-    struct sm4_test_vector *vectors;
-    size_t tests_count;
-};
-
-#endif
+#endif	/* _ZVKNS_H */

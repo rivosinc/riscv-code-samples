@@ -59,10 +59,12 @@ aes-cbc-test
 sha-test
 aes-gcm-test
 zvkb-test
+sm3-test
 sm4-test
 aes-cbc-test.s
 aes-cbc-test.s
 sha-test.s
 aes-gcm-test.s
 zvkb-test.s
+sm3-test.s
 sm4-test.s

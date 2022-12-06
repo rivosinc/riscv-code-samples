@@ -26,7 +26,7 @@
 #
 
 .data
-# Function Ket
+# Function Key
 # Used for generating -1 round of round key {rk[-4], rk[-3], rk[-2], rk[-1]}
 FK: .word 0xA3B1BAC6, 0x56AA3350, 0x677D9197, 0xB27022DC
 

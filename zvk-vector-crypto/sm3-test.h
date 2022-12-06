@@ -14,24 +14,22 @@
  * limitations under the License.
  */
 
-#ifndef _SM4_TEST_H
-#define _SM4_TEST_H
+#ifndef _SM3_TEST_H_
+#define _SM3_TEST_H_
+
+#include <stdint.h>
+#include <stddef.h>
 
 __attribute__((aligned(16)))
-struct sm4_test_vector {
-    uint32_t *message;
-    uint32_t *output;
-    uint32_t *master_key;
+struct sm3_test_vector {
+    const uint32_t *message;
+    const uint32_t *expected;
     size_t message_len;
-    size_t iterarions;
-    bool encrypt;
-	char foo[3];
 };
 
-struct sm4_test_suite {
+struct sm3_test_suite {
     const char *name;
-    struct sm4_test_vector *vectors;
-    size_t tests_count;
+    struct sm3_test_vector *vectors;
 };
 
 #endif

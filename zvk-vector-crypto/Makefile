@@ -22,8 +22,7 @@ AS?=$(TARGET)-as
 CC?=$(TARGET)-gcc
 LD?=$(TARGET)-gcc
 
-MARCH_EXT_FLAGS=_zvkns_zvknhb_zvkb_zvksed
-
+MARCH_EXT_FLAGS=_zvkns_zvknhb_zvkb_zvksed_zvksh
 # By default run the GCM tests using both zvkg and zvkb extensions.
 # If your implementation doesn't support Zvkg set the SKIP_ZVKG env.
 ifndef SKIP_ZVKG
@@ -59,6 +58,7 @@ GCM_VECTORS=aes-gcm-vectors.h    \
 	    gcmDecrypt256.h      \
 	    gcmEncryptExtIV256.h \
 
+SM3_VECTORS=sm3-test-vectors.h
 SM4_VECTORS=sm4-test-vectors.h
 
 SUBDIR_CBC_VECTORS=$(CBC_VECTORS:%=$(TEST_VECTORS_DIR)/%)
@@ -69,14 +69,16 @@ OBJECTS=aes-cbc-test.o \
 	sha-test.o \
 	zvkb-test.o \
 	aes-gcm-test.o \
+	sm3-test.o \
 	sm4-test.o \
 	zvkns.o \
 	zvknh.o \
 	zvkb.o \
 	zvkg.o \
-	zvksed.o
+	zvksed.o \
+	zvksh.o
 
-default: aes-cbc-test aes-gcm-test sha-test zvkb-test sm4-test
+default: aes-cbc-test aes-gcm-test sha-test zvkb-test sm3-test sm4-test
 
 .PHONY: test-vectors
 test-vectors: $(SUBDIR_CBC_VECTORS) $(SUBDIR_GCM_VECTORS) $(SUBDIR_SHA_VECTORS)
@@ -108,6 +110,9 @@ sha-test: sha-test.o zvknh.o
 zvkb-test: zvkb-test.o zvkb.o
 	$(LD) $(LDFLAGS) -o $@ $^
 
+sm3-test: sm3-test.o zvksh.o
+	$(LD) $(LDFLAGS) -o $@ $^
+
 sm4-test: sm4-test.o zvksed.o
 	$(LD) $(LDFLAGS) -o $@ $^
 
@@ -127,12 +132,16 @@ run-sha: sha-test
 run-zvkb: zvkb-test
 	$(SPIKE) $(SPIKE_FLAGS) $(PK) $<
 
+.PHONY: run-sm3
+run-sm3: sm3-test
+	$(SPIKE) $(SPIKE_FLAGS) $(PK) $<
+
 .PHONY: run-sm4
 run-sm4: sm4-test
 	$(SPIKE) $(SPIKE_FLAGS) $(PK) $<
 
 .PHONY: run-tests
-run-tests: run-aes-cbc run-aes-gcm run-sha run-zvkb run-sm4
+run-tests: run-aes-cbc run-aes-gcm run-sha run-zvkb run-sm3 run-sm4
 
 .PHONY: clean
 clean:
@@ -144,4 +153,5 @@ clean:
 	rm -f sha-test
 	rm -f zvkb-test
 	rm -f aes-gcm-test
+	rm -f sm3-test
 	rm -f sm4-test
