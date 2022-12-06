@@ -45,24 +45,34 @@ SHA_VECTORS=sha256-vectors.h \
 	    sha512-vectors.h \
 	    SHA512LongMsg.h  \
 	    SHA512ShortMsg.h
+GCM_VECTORS=aes-gcm-vectors.h    \
+	    gcmDecrypt128.h      \
+	    gcmEncryptExtIV128.h \
+	    gcmDecrypt256.h      \
+	    gcmEncryptExtIV256.h \
 
 SUBDIR_CBC_VECTORS=$(CBC_VECTORS:%=$(TEST_VECTORS_DIR)/%)
 SUBDIR_SHA_VECTORS=$(SHA_VECTORS:%=$(TEST_VECTORS_DIR)/%)
+SUBDIR_GCM_VECTORS=$(GCM_VECTORS:%=$(TEST_VECTORS_DIR)/%)
 
 OBJECTS=aes-cbc-test.o \
 	sha-test.o \
 	zvkb-test.o \
+	aes-gcm-test.o \
 	zvkns.o \
 	zvknh.o \
 	zvkb.o
 
-default: aes-cbc-test sha-test zvkb-test
+default: aes-cbc-test aes-gcm-test sha-test zvkb-test
 
 .PHONY: test-vectors
-test-vectors: $(SUBDIR_CBC_VECTORS) $(SUBDIR_SHA_VECTORS)
+test-vectors: $(SUBDIR_CBC_VECTORS) $(SUBDIR_GCM_VECTORS) $(SUBDIR_SHA_VECTORS)
 
 $(SUBDIR_CBC_VECTORS):
 	python3 gentests.py cbc
+
+$(SUBDIR_GCM_VECTORS):
+	python3 gentests.py gcm
 
 $(SUBDIR_SHA_VECTORS):
 	python3 gentests.py sha256 sha512
@@ -76,6 +86,9 @@ $(OBJECTS): %.o: %.s
 aes-cbc-test: aes-cbc-test.o zvkns.o
 	$(LD) $(LDFLAGS) -o $@ $^
 
+aes-gcm-test: aes-gcm-test.o zvkns.o zvkb.o
+	$(LD) $(LDFLAGS) -o $@ $^
+
 sha-test: sha-test.o zvknh.o
 	$(LD) $(LDFLAGS) -o $@ $^
 
@@ -84,6 +97,10 @@ zvkb-test: zvkb-test.o zvkb.o
 
 .PHONY: run-aes-cbc
 run-aes-cbc: aes-cbc-test
+	$(SPIKE) $(SPIKE_FLAGS) $(PK) $<
+
+.PHONY: run-aes-gcm
+run-aes-gcm: aes-gcm-test
 	$(SPIKE) $(SPIKE_FLAGS) $(PK) $<
 
 .PHONY: run-sha
@@ -95,13 +112,15 @@ run-zvkb: zvkb-test
 	$(SPIKE) $(SPIKE_FLAGS) $(PK) $<
 
 .PHONY: run-tests
-run-tests: run-aes-cbc run-sha run-zvkb
+run-tests: run-aes-cbc run-aes-gcm run-sha run-zvkb
 
 .PHONY: clean
 clean:
 	rm -f $(SUBDIR_CBC_VECTORS)
 	rm -f $(SUBDIR_SHA_VECTORS)
+	rm -f $(SUBDIR_GCM_VECTORS)
 	rm -f *.o
 	rm -f aes-cbc-test
 	rm -f sha-test
 	rm -f zvkb-test
+	rm -f aes-gcm-test

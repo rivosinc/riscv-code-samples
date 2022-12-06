@@ -156,13 +156,6 @@ class GenTestCase:
         else:
             self.testStruct.append("    .encrypt = false,\n")
 
-        if self.cipherType == CipherTypes.gcm:
-            if 'FAIL' in data.keys():
-                self.testStruct.append("    .expect_fail = true\n")
-            else:
-                self.testStruct.append("    .expect_fail = false\n")
-
-
     def writeTestFile(self, testName):
         fp = open(os.path.join(outdir, testName + ".h"), "w")
         for data in self.testData:
