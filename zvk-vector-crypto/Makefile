@@ -23,7 +23,7 @@ AS?=$(TARGET)-as
 CC?=$(TARGET)-gcc
 LD?=$(TARGET)-gcc
 
-MARCH_EXT_FLAGS=_zvkb_zvkns
+MARCH_EXT_FLAGS=_zvkb_zvknhb_zvkns
 
 # By default run the GCM tests using both zvkg and zvkb extensions.
 # If your implementation doesn't support Zvkg set the SKIP_ZVKG env.
@@ -59,13 +59,23 @@ GCM_VECTORS=\
 	gcmEncryptExtIV128.h \
 	gcmEncryptExtIV256.h \
 
+SHA_VECTORS=\
+	sha256-vectors.h \
+	SHA256LongMsg.h  \
+	SHA256ShortMsg.h \
+	sha512-vectors.h \
+	SHA512LongMsg.h  \
+	SHA512ShortMsg.h
+
 SUBDIR_CBC_VECTORS=$(CBC_VECTORS:%=$(TEST_VECTORS_DIR)/%)
 SUBDIR_GCM_VECTORS=$(GCM_VECTORS:%=$(TEST_VECTORS_DIR)/%)
+SUBDIR_SHA_VECTORS=$(SHA_VECTORS:%=$(TEST_VECTORS_DIR)/%)
 
 OBJECTS=\
 	aes-cbc-test.o \
 	aes-gcm-test.o \
 	log.o \
+	sha-test.o \
 	vlen-bits.o \
 	zvkb-test.o \
 	zvkb.o \
@@ -73,16 +83,19 @@ OBJECTS=\
 	zvknh.o \
 	zvkns.o \
 
-default: aes-cbc-test aes-gcm-test zvkb-test
+default: aes-cbc-test aes-gcm-test zvkb-test sha-test
 
 .PHONY: test-vectors
-test-vectors: $(SUBDIR_CBC_VECTORS) $(SUBDIR_GCM_VECTORS)
+test-vectors: $(SUBDIR_CBC_VECTORS) $(SUBDIR_GCM_VECTORS) $(SUBDIR_SHA_VECTORS)
 
 $(SUBDIR_CBC_VECTORS):
 	python3 gentests.py cbc
 
 $(SUBDIR_GCM_VECTORS):
 	python3 gentests.py gcm
+
+$(SUBDIR_SHA_VECTORS):
+	python3 gentests.py sha256 sha512
 
 %.s: %.c test-vectors
 	$(CC) -S $(CFLAGS) $(DFLAGS) -o $@ $<
@@ -99,6 +112,10 @@ aes-gcm-test: aes-gcm-test.o zvkns.o zvkb.o zvkg.o
 zvkb-test: zvkb-test.o zvkb.o
 	$(LD) $(LDFLAGS) -o $@ $^
 
+sha-test: sha-test.o zvknh.o
+	$(LD) $(LDFLAGS) -o $@ $^
+
+
 .PHONY: run-aes-cbc
 run-aes-cbc: aes-cbc-test
 	$(SPIKE) $(SPIKE_FLAGS) $(PK) $<
@@ -107,18 +124,24 @@ run-aes-cbc: aes-cbc-test
 run-aes-gcm: aes-gcm-test
 	$(SPIKE) $(SPIKE_FLAGS) $(PK) $<
 
+.PHONY: run-sha
+run-sha: sha-test
+	$(SPIKE) $(SPIKE_FLAGS) $(PK) $<
+
 .PHONY: run-zvkb
 run-zvkb: zvkb-test
 	$(SPIKE) $(SPIKE_FLAGS) $(PK) $<
 
 .PHONY: run-tests
-run-tests: run-aes-cbc run-aes-gcm run-zvkb
+run-tests: run-aes-cbc run-aes-gcm run-sha run-zvkb
 
 .PHONY: clean
 clean:
 	rm -f $(SUBDIR_CBC_VECTORS)
 	rm -f $(SUBDIR_GCM_VECTORS)
+	rm -f $(SUBDIR_SHA_VECTORS)
 	rm -f *.o
 	rm -f aes-cbc-test
 	rm -f aes-gcm-test
+	rm -f sha-test
 	rm -f zvkb-test
