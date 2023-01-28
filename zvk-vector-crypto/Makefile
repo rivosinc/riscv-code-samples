@@ -24,6 +24,14 @@ CC?=$(TARGET)-gcc
 LD?=$(TARGET)-gcc
 
 MARCH_EXT_FLAGS=_zvkb_zvkns
+
+# By default run the GCM tests using both zvkg and zvkb extensions.
+# If your implementation doesn't support Zvkg set the SKIP_ZVKG env.
+ifndef SKIP_ZVKG
+MARCH_EXT_FLAGS:=$(MARCH_EXT_FLAGS)_zvkg
+DFLAGS+=-DUSE_ZVKG
+endif
+
 CFLAGS?=-march=rv64gcv$(MARCH_EXT_FLAGS)
 CFLAGS+=-Wall
 LDFLAGS+=-static
@@ -61,6 +69,8 @@ OBJECTS=\
 	vlen-bits.o \
 	zvkb-test.o \
 	zvkb.o \
+	zvkg.o \
+	zvknh.o \
 	zvkns.o \
 
 default: aes-cbc-test aes-gcm-test zvkb-test
@@ -75,7 +85,7 @@ $(SUBDIR_GCM_VECTORS):
 	python3 gentests.py gcm
 
 %.s: %.c test-vectors
-	$(CC) -S $(CFLAGS) -o $@ $<
+	$(CC) -S $(CFLAGS) $(DFLAGS) -o $@ $<
 
 $(OBJECTS): %.o: %.s
 	$(AS) -c $(CFLAGS) -o $@ $^
@@ -83,7 +93,7 @@ $(OBJECTS): %.o: %.s
 aes-cbc-test: aes-cbc-test.o zvkns.o vlen-bits.o log.o
 	$(LD) $(LDFLAGS) -o $@ $^
 
-aes-gcm-test: aes-gcm-test.o zvkns.o zvkb.o
+aes-gcm-test: aes-gcm-test.o zvkns.o zvkb.o zvkg.o
 	$(LD) $(LDFLAGS) -o $@ $^
 
 zvkb-test: zvkb-test.o zvkb.o
