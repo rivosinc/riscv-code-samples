@@ -44,22 +44,35 @@ CBC_VECTORS=\
 	CBCVarTxt256.h    \
 	aes-cbc-vectors.h \
 
+GCM_VECTORS=\
+	aes-gcm-vectors.h    \
+	gcmDecrypt128.h      \
+	gcmDecrypt256.h      \
+	gcmEncryptExtIV128.h \
+	gcmEncryptExtIV256.h \
+
 SUBDIR_CBC_VECTORS=$(CBC_VECTORS:%=$(TEST_VECTORS_DIR)/%)
+SUBDIR_GCM_VECTORS=$(GCM_VECTORS:%=$(TEST_VECTORS_DIR)/%)
 
 OBJECTS=\
 	aes-cbc-test.o \
+	aes-gcm-test.o \
 	log.o \
 	vlen-bits.o \
+	zvkb-test.o \
 	zvkb.o \
 	zvkns.o \
 
-default: aes-cbc-test zvkb-test
+default: aes-cbc-test aes-gcm-test zvkb-test
 
 .PHONY: test-vectors
-test-vectors: $(SUBDIR_CBC_VECTORS)
+test-vectors: $(SUBDIR_CBC_VECTORS) $(SUBDIR_GCM_VECTORS)
 
 $(SUBDIR_CBC_VECTORS):
 	python3 gentests.py cbc
+
+$(SUBDIR_GCM_VECTORS):
+	python3 gentests.py gcm
 
 %.s: %.c test-vectors
 	$(CC) -S $(CFLAGS) -o $@ $<
@@ -70,23 +83,32 @@ $(OBJECTS): %.o: %.s
 aes-cbc-test: aes-cbc-test.o zvkns.o vlen-bits.o log.o
 	$(LD) $(LDFLAGS) -o $@ $^
 
+aes-gcm-test: aes-gcm-test.o zvkns.o zvkb.o
+	$(LD) $(LDFLAGS) -o $@ $^
+
+zvkb-test: zvkb-test.o zvkb.o
+	$(LD) $(LDFLAGS) -o $@ $^
+
 .PHONY: run-aes-cbc
 run-aes-cbc: aes-cbc-test
 	$(SPIKE) $(SPIKE_FLAGS) $(PK) $<
 
-zvkb-test: zvkb-test.o zvkb.o
-	$(LD) $(LDFLAGS) -o $@ $^
+.PHONY: run-aes-gcm
+run-aes-gcm: aes-gcm-test
+	$(SPIKE) $(SPIKE_FLAGS) $(PK) $<
 
 .PHONY: run-zvkb
 run-zvkb: zvkb-test
 	$(SPIKE) $(SPIKE_FLAGS) $(PK) $<
 
 .PHONY: run-tests
-run-tests: run-aes-cbc run-zvkb
+run-tests: run-aes-cbc run-aes-gcm run-zvkb
 
 .PHONY: clean
 clean:
 	rm -f $(SUBDIR_CBC_VECTORS)
+	rm -f $(SUBDIR_GCM_VECTORS)
 	rm -f *.o
 	rm -f aes-cbc-test
+	rm -f aes-gcm-test
 	rm -f zvkb-test
