@@ -79,126 +79,115 @@ zvksh_sm3_encode_vv:
     # As vsm3c consumes only w0, w1, w4, w5 we need to slide the input
     # 2 elements down so we process elements w2, w3, w6, w7
     # This will be repeated for each odd round.
-    vslidedown.vi v2, v3, 2
+    vslidedown.vi v2, v3, 2 # v2 := {w2, ..., w7, 0, 0}
 
     vsm3c.vi v0, v3, 0
     vsm3c.vi v0, v2, 1
 
-    # Prepare a vector with {w11, w10, w9, w8, w7, w6, w5, w4}
-    # {0, 0, w7, w6, w5, w4, w3, w2} >> 2 -> {0, 0, 0, 0, w7, w6, w5, w4}
-    vslidedown.vi v2, v2, 2
-    # {w15, w14, w13, w12, w11, w10, w9, w8} << 4 -> {w11, w10, w9, w8, 0, 0, 0, 0}
-    vslideup.vi v4, v5, 4
-    # Merge the registers.
-    vor.vv v2, v2, v4
+    # Prepare a vector with {w4, ..., w11}
+    vslidedown.vi v2, v2, 2 # v2 := {w4, ..., w7, 0, 0, 0, 0}
+    vslideup.vi v2, v5, 4   # v2 := {w4, w5, w6, w7, w8, w9, w10, w11}
 
     vsm3c.vi v0, v2, 2
-    vslidedown.vi v2, v2, 2
+    vslidedown.vi v2, v2, 2 # v2 := {w6, w7, w8, w9, w10, w11, 0, 0}
     vsm3c.vi v0, v2, 3
 
     vsm3c.vi v0, v5, 4
-    vslidedown.vi v2, v5, 2
+    vslidedown.vi v2, v5, 2 # v2 := {w10, w11, w12, w13, w14, w15, 0, 0}
     vsm3c.vi v0, v2, 5
 
-    vsm3me.vv v3, v5, v3
+    vsm3me.vv v3, v5, v3    # v3 := {w16, w17, w18, w19, w20, w21, w22, w23}
 
-    # Prepare a register with {w19, w18, w17, w16, w15, w14, w13, w12}
-    vslidedown.vi v2, v2, 2
-    vslideup.vi v4, v3, 4
-    vor.vv v2, v2, v4
+    # Prepare a register with {w12, w13, w14, w15, w16, w17, w18, w19}
+    vslidedown.vi v2, v2, 2 # v2 := {w12, w13, w14, w15, 0, 0, 0, 0}
+    vslideup.vi v2, v3, 4   # v2 := {w12, w13, w14, w15, w16, w17, w18, w19}
 
     vsm3c.vi v0, v2, 6
-    vslidedown.vi v2, v2, 2
+    vslidedown.vi v2, v2, 2 # v2 := {w14, w15, w16, w17, w18, w19, 0, 0}
     vsm3c.vi v0, v2, 7
 
     vsm3c.vi v0, v3, 8
-    vslidedown.vi v2, v3, 2
+    vslidedown.vi v2, v3, 2 # v2 := {w18, w19, w20, w21, w22, w23, 0, 0}
     vsm3c.vi v0, v2, 9
 
-    vsm3me.vv v5, v3, v5
+    vsm3me.vv v5, v3, v5    # v5 := {w24, w25, w26, w27, w28, w29, w30, w31}
 
-    # Prepare a register with {w27, w26, w25, w24, w23, w22, w21, w20}
-    vslidedown.vi v2, v2, 2
-    vslideup.vi v4, v5, 4
-    vor.vv v2, v2, v4
+    # Prepare a register with {w20, w21, w22, w23, w24, w25, w26, w27}
+    vslidedown.vi v2, v2, 2 # v2 := {w20, w21, w22, w23, 0, 0, 0, 0}
+    vslideup.vi v2, v5, 4   # v2 := {w20, w21, w22, w23, w24, w25, w26, w27}
 
     vsm3c.vi v0, v2, 10
-    vslidedown.vi v2, v2, 2
+    vslidedown.vi v2, v2, 2 # v2 := {w22, w23, w24, w25, w26, w27, 0, 0}
     vsm3c.vi v0, v2, 11
 
     vsm3c.vi v0, v5, 12
-    vslidedown.vi v2, v5, 2
+    vslidedown.vi v2, v5, 2 # v2 := {w26, w27, w28, w29, w30, w31, 0, 0}
     vsm3c.vi v0, v2, 13
 
-    vsm3me.vv v3, v5, v3
+    vsm3me.vv v3, v5, v3    # v3 := {w32, w33, w34, w35, w36, w37, w38, w39}
 
-    # Prepare a register with {w35, w34, w33, w32, w31, w30, w29, w28}
-    vslidedown.vi v2, v2, 2
-    vslideup.vi v4, v3, 4
-    vor.vv v2, v2, v4
+    # Prepare a register with {w28, w29, w30, w31, w32, w33, w34, w35}
+    vslidedown.vi v2, v2, 2 # v2 := {w28, w29, w30, w31, 0, 0, 0, 0}
+    vslideup.vi v2, v3, 4   # v2 := {w28, w29, w30, w31, w32, w33, w34, w35}
 
     vsm3c.vi v0, v2, 14
-    vslidedown.vi v2, v2, 2
+    vslidedown.vi v2, v2, 2 # v2 := {w30, w31, w32, w33, w34, w35, 0, 0}
     vsm3c.vi v0, v2, 15
 
     vsm3c.vi v0, v3, 16
-    vslidedown.vi v2, v3, 2
+    vslidedown.vi v2, v3, 2 # v2 := {w34, w35, w36, w37, w38, w39, 0, 0}
     vsm3c.vi v0, v2, 17
 
-    vsm3me.vv v5, v3, v5
+    vsm3me.vv v5, v3, v5    # v5 := {w40, w41, w42, w43, w44, w45, w46, w47}
 
-    # Prepare a register with {w43, w42, w41, w40, w39, w38, w37, w36}
-    vslidedown.vi v2, v2, 2
-    vslideup.vi v4, v5, 4
-    vor.vv v2, v2, v4
+    # Prepare a register with {w36, w37, w38, w39, w40, w41, w42, w43}
+    vslidedown.vi v2, v2, 2 # v2 := {w36, w37, w38, w39, 0, 0, 0, 0}
+    vslideup.vi v2, v5, 4   # v2 := {w36, w37, w38, w39, w40, w41, w42, w43}
 
     vsm3c.vi v0, v2, 18
-    vslidedown.vi v2, v2, 2
+    vslidedown.vi v2, v2, 2 # v2 := {w38, w39, w40, w41, w42, w43, 0, 0}
     vsm3c.vi v0, v2, 19
 
     vsm3c.vi v0, v5, 20
-    vslidedown.vi v2, v5, 2
+    vslidedown.vi v2, v5, 2 # v2 := {w42, w43, w44, w45, w46, w47, 0, 0}
     vsm3c.vi v0, v2, 21
 
-    vsm3me.vv v3, v5, v3
+    vsm3me.vv v3, v5, v3    # v3 := {w48, w49, w50, w51, w52, w53, w54, w55}
 
-    # Prepare a register with {w51, w50, w49, w48, w47, w46, w45, w44}
-    vslidedown.vi v2, v2, 2
-    vslideup.vi v4, v3, 4
-    vor.vv v2, v2, v4
+    # Prepare a register with {w44, w45, w46, w47, w48, w49, w50, w51}
+    vslidedown.vi v2, v2, 2 # v2 := {w44, w45, w46, w47, 0, 0, 0, 0}
+    vslideup.vi v2, v3, 4   # v2 := {w44, w45, w46, w47, w48, w49, w50, w51}
 
     vsm3c.vi v0, v2, 22
-    vslidedown.vi v2, v2, 2
+    vslidedown.vi v2, v2, 2 # v2 := {w46, w47, w48, w49, w50, w51, 0, 0}
     vsm3c.vi v0, v2, 23
 
     vsm3c.vi v0, v3, 24
-    vslidedown.vi v2, v3, 2
+    vslidedown.vi v2, v3, 2 # v2 := {w50, w51, w52, w53, w54, w55, 0, 0}
     vsm3c.vi v0, v2, 25
 
-    vsm3me.vv v5, v3, v5
+    vsm3me.vv v5, v3, v5    # v5 := {w56, w57, w58, w59, w60, w61, w62, w63}
 
-    # Prepare a register with {w59, w58, w57, w56, w55, w54, w53, w52}
-    vslidedown.vi v2, v2, 2
-    vslideup.vi v4, v5, 4
-    vor.vv v2, v2, v4
+    # Prepare a register with {w52, w53, w54, w55, w56, w57, w58, w59}
+    vslidedown.vi v2, v2, 2 # v2 := {w52, w53, w54, w55, 0, 0, 0, 0}
+    vslideup.vi v2, v5, 4   # v2 := {w52, w53, w54, w55, w56, w57, w58, w59}
 
     vsm3c.vi v0, v2, 26
-    vslidedown.vi v2, v2, 2
+    vslidedown.vi v2, v2, 2 # v2 := {w54, w55, w56, w57, w58, w59, 0, 0}
     vsm3c.vi v0, v2, 27
 
     vsm3c.vi v0, v5, 28
-    vslidedown.vi v2, v5, 2
+    vslidedown.vi v2, v5, 2 # v2 := {w58, w59, w60, w61, w62, w63, 0, 0}
     vsm3c.vi v0, v2, 29
 
-    vsm3me.vv v3, v5, v3
+    vsm3me.vv v3, v5, v3    # v3 := {w64, w65, w66, w67, w68, w69, w70, w71}
 
-    # Prepare a register with {w67, w66, w65, w64, w63, w62, w61, w60}
-    vslidedown.vi v2, v2, 2
-    vslideup.vi v4, v3, 4
-    vor.vv v2, v2, v4
+    # Prepare a register with {w60, w61, w62, w63, w64, w65, w66, w67}
+    vslidedown.vi v2, v2, 2 # v2 := {w60, w61, w62, w63, 0, 0, 0, 0}
+    vslideup.vi v2, v3, 4   # v2 := {w60, w61, w62, w63, w64, w65, w66, w67}
 
     vsm3c.vi v0, v2, 30
-    vslidedown.vi v2, v2, 2
+    vslidedown.vi v2, v2, 2 # v2 := {w62, w63, w64, w65, w66, w67, 0, 0}
     vsm3c.vi v0, v2, 31
 
     # XOR in the previous state.
