@@ -22,7 +22,7 @@ AS?=$(TARGET)-as
 CC?=$(TARGET)-gcc
 LD?=$(TARGET)-gcc
 
-MARCH_EXT_FLAGS=_zvkb
+MARCH_EXT_FLAGS=_zvkb_zvkned
 CFLAGS?=-march=rv64gcv$(MARCH_EXT_FLAGS)
 CFLAGS+=-Wall
 LDFLAGS+=-static
@@ -33,14 +33,38 @@ COMMON_SPIKE_FLAGS?=--isa=rv64gcv$(MARCH_EXT_FLAGS)
 
 TEST_VECTORS_DIR=test-vectors
 
+CBC_VECTORS=\
+	CBCGFSbox128.h    \
+	CBCGFSbox256.h    \
+	CBCKeySbox128.h   \
+	CBCKeySbox256.h   \
+	CBCMMT128.h       \
+	CBCMMT256.h       \
+	CBCVarKey128.h    \
+	CBCVarKey256.h    \
+	CBCVarTxt128.h    \
+	CBCVarTxt256.h    \
+	aes-cbc-vectors.h \
+
+SUBDIR_CBC_VECTORS=$(CBC_VECTORS:%=$(TEST_VECTORS_DIR)/%)
+
 C_OBJECTS=\
+	aes-cbc-test.o \
+	log.o \
 	zkb-test.o \
 
 ASM_OBJECTS=\
 	vlen-bits.o \
 	zvkb.o \
+	zvkned.o \
 
-default: zvkb-test
+default: aes-cbc-test zvkb-test
+
+.PHONY: test-vectors
+test-vectors: $(SUBDIR_CBC_VECTORS)
+
+$(SUBDIR_CBC_VECTORS):
+	python3 gentests.py cbc
 
 $(C_OBJECTS): %.o: %.c test-vectors
 	$(CC) -c $(CFLAGS) -o $@ $<
@@ -48,8 +72,18 @@ $(C_OBJECTS): %.o: %.c test-vectors
 $(ASM_OBJECTS): %.o: %.s
 	$(AS) -c $(CFLAGS) -o $@ $^
 
+aes-cbc-test: aes-cbc-test.o zvkned.o log.o vlen-bits.o
+	$(LD) $(LDFLAGS) -o $@ $^
+
 zvkb-test: zvkb-test.o zvkb.o log.o vlen-bits.o
 	$(LD) $(LDFLAGS) -o $@ $^
+
+# TODO: add VLEN=32, VLEN=64 runs.
+.PHONY: run-aes-cbc
+run-aes-cbc: aes-cbc-test
+	for VLEN in 128 256 512; do \
+	    $(SPIKE) --varch=vlen:$${VLEN},elen:64 $(COMMON_SPIKE_FLAGS) $(PK) $< || exit 1; \
+	done
 
 .PHONY: run-zvkb
 run-zvkb: zvkb-test
@@ -58,9 +92,11 @@ run-zvkb: zvkb-test
 	done
 
 .PHONY: run-tests
-run-tests: run-zvkb
+run-tests: run-aes-cbc run-zvkb
 
 .PHONY: clean
 clean:
+	rm -f $(SUBDIR_CBC_VECTORS)
 	rm -f *.o
+	rm -f aes-cbc-test
 	rm -f zvkb-test
