@@ -22,7 +22,8 @@ AS?=$(TARGET)-as
 CC?=$(TARGET)-gcc
 LD?=$(TARGET)-gcc
 
-MARCH_EXT_FLAGS=_zvkb_zvkg_zvkned_zvknhb
+MARCH_EXT_FLAGS=_zvkb_zvkg_zvkned_zvknhb_zvksh
+
 CFLAGS?=-march=rv64gcv$(MARCH_EXT_FLAGS)
 CFLAGS+=-Wall
 LDFLAGS+=-static
@@ -34,32 +35,34 @@ COMMON_SPIKE_FLAGS?=--isa=rv64gcv$(MARCH_EXT_FLAGS)
 TEST_VECTORS_DIR=test-vectors
 
 CBC_VECTORS=\
-	CBCGFSbox128.h    \
-	CBCGFSbox256.h    \
-	CBCKeySbox128.h   \
-	CBCKeySbox256.h   \
-	CBCMMT128.h       \
-	CBCMMT256.h       \
-	CBCVarKey128.h    \
-	CBCVarKey256.h    \
-	CBCVarTxt128.h    \
-	CBCVarTxt256.h    \
-	aes-cbc-vectors.h \
+        CBCGFSbox128.h    \
+        CBCGFSbox256.h    \
+        CBCKeySbox128.h   \
+        CBCKeySbox256.h   \
+        CBCMMT128.h       \
+        CBCMMT256.h       \
+        CBCVarKey128.h    \
+        CBCVarKey256.h    \
+        CBCVarTxt128.h    \
+        CBCVarTxt256.h    \
+        aes-cbc-vectors.h \
 
 GCM_VECTORS=\
-	aes-gcm-vectors.h    \
-	gcmDecrypt128.h      \
-	gcmDecrypt256.h      \
-	gcmEncryptExtIV128.h \
-	gcmEncryptExtIV256.h \
+        aes-gcm-vectors.h    \
+        gcmDecrypt128.h      \
+        gcmDecrypt256.h      \
+        gcmEncryptExtIV128.h \
+        gcmEncryptExtIV256.h \
 
 SHA_VECTORS=\
-	sha256-vectors.h \
-	SHA256LongMsg.h  \
-	SHA256ShortMsg.h \
-	sha512-vectors.h \
-	SHA512LongMsg.h  \
-	SHA512ShortMsg.h
+        sha256-vectors.h \
+        SHA256LongMsg.h  \
+        SHA256ShortMsg.h \
+        sha512-vectors.h \
+        SHA512LongMsg.h  \
+        SHA512ShortMsg.h
+
+SM3_VECTORS=sm3-test-vectors.h
 
 SUBDIR_CBC_VECTORS=$(CBC_VECTORS:%=$(TEST_VECTORS_DIR)/%)
 SUBDIR_GCM_VECTORS=$(GCM_VECTORS:%=$(TEST_VECTORS_DIR)/%)
@@ -70,6 +73,7 @@ C_OBJECTS=\
 	aes-gcm-test.o \
 	log.o \
 	sha-test.o \
+        sm3-test.o \
 	zkb-test.o \
 
 ASM_OBJECTS=\
@@ -79,8 +83,9 @@ ASM_OBJECTS=\
 	zvkg.o \
 	zvkned.o \
 	zvknh.o \
+        zvksh.o \
 
-default: aes-cbc-test aes-gcm-test zvkb-test sha-test
+default: aes-cbc-test aes-gcm-test sha-test sm3-test zvkb-test
 
 .PHONY: test-vectors
 test-vectors: $(SUBDIR_CBC_VECTORS) $(SUBDIR_GCM_VECTORS) $(SUBDIR_SHA_VECTORS)
@@ -112,6 +117,12 @@ sha-test: sha-test.o zvknh.o log.o vlen-bits.o
 zvkb-test: zvkb-test.o zvkb.o log.o vlen-bits.o
 	$(LD) $(LDFLAGS) -o $@ $^
 
+sha-test: sha-test.o zvknh.o
+	$(LD) $(LDFLAGS) -o $@ $^
+
+sm3-test: sm3-test.o zvksh.o log.o vlen-bits.o
+	$(LD) $(LDFLAGS) -o $@ $^
+
 # TODO: add VLEN=32, VLEN=64 runs.
 .PHONY: run-aes-cbc
 run-aes-cbc: aes-cbc-test
@@ -139,6 +150,12 @@ run-sha: sha-test
 	    $(SPIKE) --varch=vlen:$${VLEN},elen:64 $(COMMON_SPIKE_FLAGS) $(PK) $< || exit 1; \
 	done
 
+.PHONY: run-sm3
+run-sm3: sm3-test
+	for VLEN in 64 128 256 512; do \
+	    $(SPIKE) --varch=vlen:$${VLEN},elen:64 $(COMMON_SPIKE_FLAGS) $(PK) $< || exit 1; \
+	done
+
 .PHONY: run-zvkb
 run-zvkb: zvkb-test
 	for VLEN in 64 128 256 512; do \
@@ -146,7 +163,7 @@ run-zvkb: zvkb-test
 	done
 
 .PHONY: run-tests
-run-tests: run-aes-cbc run-aes-gcm run-sha run-zvkb
+run-tests: run-aes-cbc run-aes-gcm run-sha run-sm3 run-zvkb
 
 .PHONY: clean
 clean:
@@ -157,4 +174,5 @@ clean:
 	rm -f aes-cbc-test
 	rm -f aes-gcm-test
 	rm -f sha-test
+	rm -f sm3-test
 	rm -f zvkb-test
