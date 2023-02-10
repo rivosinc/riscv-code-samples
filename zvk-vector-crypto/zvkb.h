@@ -17,7 +17,8 @@
 
 #include <stdint.h>
 
-extern void zvkb_ghash(uint64_t* X, uint64_t* H);
 extern void zvkb_ghash_init(uint64_t* H);
+
+extern void zvkb_ghash(uint64_t* X, uint64_t* H);
 
 #endif  // ZVKB_H_
