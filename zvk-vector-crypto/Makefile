@@ -22,7 +22,7 @@ AS?=$(TARGET)-as
 CC?=$(TARGET)-gcc
 LD?=$(TARGET)-gcc
 
-MARCH_EXT_FLAGS=_zvkb_zvkg_zvkned
+MARCH_EXT_FLAGS=_zvkb_zvkg_zvkned_zvknhb
 CFLAGS?=-march=rv64gcv$(MARCH_EXT_FLAGS)
 CFLAGS+=-Wall
 LDFLAGS+=-static
@@ -53,13 +53,23 @@ GCM_VECTORS=\
 	gcmEncryptExtIV128.h \
 	gcmEncryptExtIV256.h \
 
+SHA_VECTORS=\
+	sha256-vectors.h \
+	SHA256LongMsg.h  \
+	SHA256ShortMsg.h \
+	sha512-vectors.h \
+	SHA512LongMsg.h  \
+	SHA512ShortMsg.h
+
 SUBDIR_CBC_VECTORS=$(CBC_VECTORS:%=$(TEST_VECTORS_DIR)/%)
 SUBDIR_GCM_VECTORS=$(GCM_VECTORS:%=$(TEST_VECTORS_DIR)/%)
+SUBDIR_SHA_VECTORS=$(SHA_VECTORS:%=$(TEST_VECTORS_DIR)/%)
 
 C_OBJECTS=\
 	aes-cbc-test.o \
 	aes-gcm-test.o \
 	log.o \
+	sha-test.o \
 	zkb-test.o \
 
 ASM_OBJECTS=\
@@ -70,16 +80,19 @@ ASM_OBJECTS=\
 	zvkned.o \
 	zvknh.o \
 
-default: aes-cbc-test aes-gcm-test zvkb-test
+default: aes-cbc-test aes-gcm-test zvkb-test sha-test
 
 .PHONY: test-vectors
-test-vectors: $(SUBDIR_CBC_VECTORS) $(SUBDIR_GCM_VECTORS)
+test-vectors: $(SUBDIR_CBC_VECTORS) $(SUBDIR_GCM_VECTORS) $(SUBDIR_SHA_VECTORS)
 
 $(SUBDIR_CBC_VECTORS):
 	python3 gentests.py cbc
 
 $(SUBDIR_GCM_VECTORS):
 	python3 gentests.py gcm
+
+$(SUBDIR_SHA_VECTORS):
+	python3 gentests.py sha256 sha512
 
 $(C_OBJECTS): %.o: %.c test-vectors
 	$(CC) -c $(CFLAGS) -o $@ $<
@@ -93,9 +106,18 @@ aes-cbc-test: aes-cbc-test.o zvkned.o log.o vlen-bits.o
 aes-gcm-test: aes-gcm-test.o zvkb.o zvkg.o zvkned.o log.o vlen-bits.o
 	$(LD) $(LDFLAGS) -o $@ $^
 
+sha-test: sha-test.o zvknh.o log.o vlen-bits.o
+	$(LD) $(LDFLAGS) -o $@ $^
+
 zvkb-test: zvkb-test.o zvkb.o log.o vlen-bits.o
 	$(LD) $(LDFLAGS) -o $@ $^
 
+# TODO: add VLEN=32, VLEN=64 runs.
+.PHONY: run-aes-cbc
+run-aes-cbc: aes-cbc-test
+	for VLEN in 128 256 512; do \
+	    $(SPIKE) --varch=vlen:$${VLEN},elen:64 $(COMMON_SPIKE_FLAGS) $(PK) $< || exit 1; \
+	done
 
 # TODO: add VLEN=32, VLEN=64 runs.
 .PHONY: run-aes-cbc
@@ -111,6 +133,12 @@ run-aes-gcm: aes-gcm-test
 	    $(SPIKE) --varch=vlen:$${VLEN},elen:64 $(COMMON_SPIKE_FLAGS) $(PK) $< || exit 1; \
 	done
 
+.PHONY: run-sha
+run-sha: sha-test
+	for VLEN in 64 128 256 512; do \
+	    $(SPIKE) --varch=vlen:$${VLEN},elen:64 $(COMMON_SPIKE_FLAGS) $(PK) $< || exit 1; \
+	done
+
 .PHONY: run-zvkb
 run-zvkb: zvkb-test
 	for VLEN in 64 128 256 512; do \
@@ -118,13 +146,15 @@ run-zvkb: zvkb-test
 	done
 
 .PHONY: run-tests
-run-tests: run-aes-cbc run-aes-gcm run-zvkb
+run-tests: run-aes-cbc run-aes-gcm run-sha run-zvkb
 
 .PHONY: clean
 clean:
 	rm -f $(SUBDIR_CBC_VECTORS)
 	rm -f $(SUBDIR_GCM_VECTORS)
+	rm -f $(SUBDIR_SHA_VECTORS)
 	rm -f *.o
 	rm -f aes-cbc-test
 	rm -f aes-gcm-test
+	rm -f sha-test
 	rm -f zvkb-test
