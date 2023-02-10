@@ -17,12 +17,72 @@
 
 #include <stdint.h>
 
+
+// Key scheduling / expansion.
+
+extern void
+zvkned_aes128_expand_key(
+    uint32_t* dest,      // char[176], 32b aligned
+    const void* key  // char[16], 32b aligned
+);
+
+extern void
+zvkned_aes256_expand_key(
+    uint32_t* dest,       // char[240], 32b aligned
+    const void* key   // char[32], 32b aligned
+);
+
+// AES-128 Encoding
+
+extern uint64_t
+zvkned_aes128_encode_vs_lmul1(
+   void* dest,
+   const void* src,
+   uint64_t n,
+   const uint32_t* expanded_key
+);
+
+extern uint64_t
+zvkned_aes128_encode_vs_lmul2(
+   void* dest,
+   const void* src,
+   uint64_t n,
+   const uint32_t* expanded_key
+);
+
+extern uint64_t
+zvkned_aes128_encode_vs_lmul4(
+   void* dest,
+   const void* src,
+   uint64_t n,
+   const uint32_t* expanded_key
+);
+
 extern uint64_t
 zvkned_aes128_encode_vv_lmul1(
    void* dest,
    const void* src,
    uint64_t n,
-   const uint8_t* key128
+   const uint32_t* expanded_key
+);
+
+
+// AES-128 Decoding
+
+extern uint64_t
+zvkned_aes128_decode_vs_lmul1(
+   void* dest,
+   const void* src,
+   uint64_t n,
+   const uint32_t* expanded_key
+);
+
+extern uint64_t
+zvkned_aes128_decode_vs_lmul2(
+   void* dest,
+   const void* src,
+   uint64_t n,
+   const uint32_t* expanded_key
 );
 
 extern uint64_t
@@ -30,7 +90,34 @@ zvkned_aes128_decode_vv_lmul1(
    void* dest,
    const void* src,
    uint64_t n,
-   const uint8_t* key128
+   const uint32_t* expanded_key
+);
+
+
+// AES-256 Enccoding
+
+extern uint64_t
+zvkned_aes256_encode_vs_lmul1(
+   void* dest,
+   const void* src,
+   uint64_t n,
+   const uint32_t* expanded_key
+);
+
+extern uint64_t
+zvkned_aes256_encode_vs_lmul2(
+   void* dest,
+   const void* src,
+   uint64_t n,
+   const uint32_t* expanded_key
+);
+
+extern uint64_t
+zvkned_aes256_encode_vs_lmul4(
+   void* dest,
+   const void* src,
+   uint64_t n,
+   const uint32_t* expanded_key
 );
 
 extern uint64_t
@@ -38,7 +125,25 @@ zvkned_aes256_encode_vv_lmul1(
    void* dest,
    const void* src,
    uint64_t n,
-   const uint8_t* key256
+   const uint32_t* expanded_key
+);
+
+// AES-256 Decoding
+
+extern uint64_t
+zvkned_aes256_decode_vs_lmul1(
+   void* dest,
+   const void* src,
+   uint64_t n,
+   const uint32_t* expanded_key
+);
+
+extern uint64_t
+zvkned_aes256_decode_vs_lmul2(
+   void* dest,
+   const void* src,
+   uint64_t n,
+   const uint32_t* expanded_key
 );
 
 extern uint64_t
@@ -46,7 +151,7 @@ zvkned_aes256_decode_vv_lmul1(
    void* dest,
    const void* src,
    uint64_t n,
-   const uint8_t* key256
+   const uint32_t* expanded_key
 );
 
 #endif  // ZVKNED_H_

@@ -36,14 +36,14 @@
 //     void* dest,
 //     const void* src,
 //     uint64_t n,
-//     const uint8_t* key
+//     const uint8_t* expanded_key
 //  );
 //
 typedef uint64_t (aes_transform_t)(
    void* dest,
    const void* src,
    uint64_t n,
-   const uint8_t* key
+   const uint32_t* expanded_key
 );
 
 enum TransformDirection {
@@ -61,10 +61,35 @@ struct aes_routine {
     enum TransformDirection direction;
 };
 
-#define NUM_ROUTINES (4)
+#define NUM_ROUTINES (14)
 
 static const struct aes_routine kAESRoutines[NUM_ROUTINES] = {
-    // AES-128
+    // AES-128 encode
+    {
+        .name = "zvkned_aes128_encode_vs_lmul1",
+        .descr = "AES-128 encode, vs variant, LMUL=1",
+        .fn = &zvkned_aes128_encode_vs_lmul1,
+        .keylen = 128,
+        .min_vlen = 128,
+        .direction = kEncode,
+    },
+    {
+        .name = "zvkned_aes128_encode_vs_lmul2",
+        .descr = "AES-128 encode, vs variant, LMUL=2",
+        .fn = &zvkned_aes128_encode_vs_lmul2,
+        .keylen = 128,
+        .min_vlen = 64,
+        .direction = kEncode,
+    },
+    {
+        .name = "zvkned_aes128_encode_vs_lmul4",
+        .descr = "AES-128 encode, vs variant, LMUL=4",
+        .fn = &zvkned_aes128_encode_vs_lmul4,
+        .keylen = 128,
+        .min_vlen = 32,
+        .direction = kEncode,
+    },
+
     {
         .name = "zvkned_aes128_encode_vv_lmul1",
         .descr = "AES-128 encode, vv variant, LMUL=1",
@@ -73,6 +98,25 @@ static const struct aes_routine kAESRoutines[NUM_ROUTINES] = {
         .min_vlen = 128,
         .direction = kEncode,
     },
+
+    // AES-128 decode
+    {
+        .name = "zvkned_aes128_decode_vs_lmul1",
+        .descr = "AES-128 decode, vs variant, LMUL=1",
+        .fn = &zvkned_aes128_decode_vs_lmul1,
+        .keylen = 128,
+        .min_vlen = 128,
+        .direction = kDecode,
+    },
+    {
+        .name = "zvkned_aes128_decode_vs_lmul2",
+        .descr = "AES-128 decode, vs variant, LMUL=2",
+        .fn = &zvkned_aes128_decode_vs_lmul2,
+        .keylen = 128,
+        .min_vlen = 64,
+        .direction = kDecode,
+    },
+
     {
         .name = "zvkned_aes128_decode_vv_lmul1",
         .descr = "AES-128 decode, vv variant, LMUL=1",
@@ -81,7 +125,33 @@ static const struct aes_routine kAESRoutines[NUM_ROUTINES] = {
         .min_vlen = 128,
         .direction = kDecode,
     },
-    // AES-256
+
+    // AES-256 encode
+    {
+        .name = "zvkned_aes256_encode_vs_lmul1",
+        .descr = "AES-256 encode, vs variant, LMUL=1",
+        .fn = &zvkned_aes256_encode_vs_lmul1,
+        .keylen = 256,
+        .min_vlen = 128,
+        .direction = kEncode,
+    },
+    {
+        .name = "zvkned_aes256_encode_vs_lmul2",
+        .descr = "AES-256 encode, vs variant, LMUL=2",
+        .fn = &zvkned_aes256_encode_vs_lmul2,
+        .keylen = 256,
+        .min_vlen = 64,
+        .direction = kEncode,
+    },
+    {
+        .name = "zvkned_aes256_encode_vs_lmul4",
+        .descr = "AES-256 encode, vs variant, LMUL=4",
+        .fn = &zvkned_aes256_encode_vs_lmul4,
+        .keylen = 256,
+        .min_vlen = 32,
+        .direction = kEncode,
+    },
+
     {
         .name = "zvkned_aes256_encode_vv_lmul1",
         .descr = "AES-256 encode, vv variant, LMUL=1",
@@ -90,6 +160,25 @@ static const struct aes_routine kAESRoutines[NUM_ROUTINES] = {
         .min_vlen = 128,
         .direction = kEncode,
     },
+
+    // AES-256 decode
+    {
+        .name = "zvkned_aes256_decode_vs_lmul1",
+        .descr = "AES-256 decode, vs variant, LMUL=1",
+        .fn = &zvkned_aes256_decode_vs_lmul1,
+        .keylen = 256,
+        .min_vlen = 128,
+        .direction = kDecode,
+    },
+    {
+        .name = "zvkned_aes256_decode_vs_lmul2",
+        .descr = "AES-256 decode, vs variant, LMUL=2",
+        .fn = &zvkned_aes256_decode_vs_lmul2,
+        .keylen = 256,
+        .min_vlen = 64,
+        .direction = kDecode,
+    },
+
     {
         .name = "zvkned_aes256_decode_vv_lmul1",
         .descr = "AES-256 decode, vv variant, LMUL=1",
@@ -99,6 +188,32 @@ static const struct aes_routine kAESRoutines[NUM_ROUTINES] = {
         .direction = kDecode,
     },
 };
+
+struct expanded_key {
+    // 240 bytes for AES-256, less needed for AES-128.
+    // Using uint32_t guarantees alignment.
+    uint32_t expanded[60];
+    //
+    size_t keylen;
+};
+
+static void
+expand_key(struct expanded_key* dest, const uint8_t* key, size_t keylen) {
+    dest->keylen = keylen;
+    switch (keylen) {
+      case 128:
+        // 128b -> 11*128b, 176B, 44 uin32_t
+        zvkned_aes128_expand_key(&dest->expanded[0], key);
+        break;
+      case 256:
+        // 256b -> 15*128b, 240B, 60 uint32_t
+        zvkned_aes256_expand_key(&dest->expanded[0], key);
+        break;
+      default:
+        LOG("Invalid keylen %zu", keylen);
+        assert(false);
+    }
+}
 
 static int
 run_test(const struct aes_cbc_test* const test, const size_t keylen)
@@ -114,17 +229,19 @@ run_test(const struct aes_cbc_test* const test, const size_t keylen)
     const int len = test->plaintextlen;
     assert(len % 16 == 0);
 
-    const uint8_t* plaintext;
+    const uint8_t* src_text;
     const uint8_t* expected;
     if (test->encrypt) {
-        plaintext = test->plaintext;
+        src_text = test->plaintext;
         expected = test->ciphertext;
     } else {
-        plaintext = test->ciphertext;
+        src_text = test->ciphertext;
         expected = test->plaintext;
     }
 
-    const uint8_t* iv = test->iv;
+    // Generate the expanded key.
+    struct expanded_key key;
+    expand_key(&key, test->key, keylen);
 
     size_t routines_tested = 0;
 
@@ -146,14 +263,17 @@ run_test(const struct aes_cbc_test* const test, const size_t keylen)
                 routine->name, vlen, routine->min_vlen);
             continue;
         }
-        // LOG("- Testing '%s'", routine->name);
+        LOG("- Testing '%s'", routine->name);
         routines_tested++;
+
+        // 'iv' gets modified below, needs to be reset for each routine.
+        const uint8_t* iv = test->iv;
 
         // Copy the input, to leave the test data intact.
         // In the future we might want to run a test case multiple times.
         // For example we could use different LMUL, or vs/vv variant
         // of an instruction.
-        memcpy(input_buf, plaintext, len);
+        memcpy(input_buf, src_text, len);
 
         for (size_t block_offset = 0; block_offset < len; block_offset+=16) {
             uint8_t* const in = &input_buf[block_offset];
@@ -165,7 +285,7 @@ run_test(const struct aes_cbc_test* const test, const size_t keylen)
                 iv = out;
             }
 
-            routine->fn(out, in, 16, test->key);
+            routine->fn(out, in, 16, &key.expanded[0]);
 
             if (!test->encrypt) {
                 for (int j = 0; j < 16; j++) {
@@ -176,6 +296,7 @@ run_test(const struct aes_cbc_test* const test, const size_t keylen)
         }
 
         if (0 != memcmp(output_buf, expected, len)) {
+            LOG("Failure against routine '%s'", routine->name);
             return 1;
         }
     }
