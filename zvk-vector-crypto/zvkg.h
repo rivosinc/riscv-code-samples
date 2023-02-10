@@ -12,13 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef ZVKB_H_
-#define ZVKB_H_
+#ifndef ZVKG_H_
+#define ZVKG_H_
 
 #include <stdint.h>
 
-extern void zvkb_ghash_init(uint64_t* H);
+// Y, X, and H point to 128 bits values, 32b aligned if the processor
+// does not support unaligned access.
+//
+//   Y <- (Y xor X) o H
+// Where 'o' is the Gallois Field Mulitplication.
+extern void
+zvkg_vghsh(
+    void* Y,
+    const void* X,
+    const void* H
+);
 
-extern void zvkb_ghash(uint64_t* X, uint64_t* H);
-
-#endif  // ZVKB_H_
+#endif  // ZVKG_H_

@@ -22,7 +22,7 @@ AS?=$(TARGET)-as
 CC?=$(TARGET)-gcc
 LD?=$(TARGET)-gcc
 
-MARCH_EXT_FLAGS=_zvkb_zvkned
+MARCH_EXT_FLAGS=_zvkb_zvkg_zvkned
 CFLAGS?=-march=rv64gcv$(MARCH_EXT_FLAGS)
 CFLAGS+=-Wall
 LDFLAGS+=-static
@@ -66,7 +66,9 @@ ASM_OBJECTS=\
 	vlen-bits.o \
 	zvkb-test.o \
 	zvkb.o \
+	zvkg.o \
 	zvkned.o \
+	zvknh.o \
 
 default: aes-cbc-test aes-gcm-test zvkb-test
 
@@ -88,23 +90,23 @@ $(ASM_OBJECTS): %.o: %.s
 aes-cbc-test: aes-cbc-test.o zvkned.o log.o vlen-bits.o
 	$(LD) $(LDFLAGS) -o $@ $^
 
-aes-gcm-test: aes-gcm-test.o  zvkb.o zvkned.o log.o vlen-bits.o
+aes-gcm-test: aes-gcm-test.o zvkb.o zvkg.o zvkned.o log.o vlen-bits.o
 	$(LD) $(LDFLAGS) -o $@ $^
 
 zvkb-test: zvkb-test.o zvkb.o log.o vlen-bits.o
 	$(LD) $(LDFLAGS) -o $@ $^
 
 
-# TODO: add VLEN=64 runs.
-.PHONY: run-aes-gcm
-run-aes-gcm: aes-gcm-test
+# TODO: add VLEN=32, VLEN=64 runs.
+.PHONY: run-aes-cbc
+run-aes-cbc: aes-cbc-test
 	for VLEN in 128 256 512; do \
 	    $(SPIKE) --varch=vlen:$${VLEN},elen:64 $(COMMON_SPIKE_FLAGS) $(PK) $< || exit 1; \
 	done
 
-# TODO: add VLEN=32, VLEN=64 runs.
-.PHONY: run-aes-cbc
-run-aes-cbc: aes-cbc-test
+# TODO: add VLEN=64 runs.
+.PHONY: run-aes-gcm
+run-aes-gcm: aes-gcm-test
 	for VLEN in 128 256 512; do \
 	    $(SPIKE) --varch=vlen:$${VLEN},elen:64 $(COMMON_SPIKE_FLAGS) $(PK) $< || exit 1; \
 	done
